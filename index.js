@@ -194,11 +194,13 @@ module.exports = function (options) {
       }
     };
 
-    if(typeof pipeline === 'function') {
-        return pipeline(tip, concatThrough(name));
+    var concatTask = name ? concatThrough(name) : undefined;
+
+    if (typeof pipeline === 'function') {
+      return pipeline(tip, concatTask);
     }
     else {
-        return tip.pipe(concatThrough(name));
+      return tip.pipe(concatTask);
     }
   }
 
@@ -236,37 +238,29 @@ module.exports = function (options) {
         }
 
         if (section[1] !== 'remove') {
-          if (getBlockType(section[5]) == 'js') {
-            (function (section, alternatePath) {
-              promise = promise
-                .then(matcherProducer)
-                .then(function (matcher) {
-                  return getFiles(section[5], jsReg, alternatePath, matcher)
-                })
-                .then(function (files) {
-                  var name = section[4];
-                  streams.push(process(name, files, section[1]));
-                  var filePath = getPath(name);
-                  if (path.extname(filePath) == '.js') {
-                    html.push('<script src="' + section[3].replace(path.basename(name), path.basename(filePath)) + '"></script>');
-                  }
-                });
-            }(section, alternatePath))
-          } else {
-            (function (section, alternatePath) {
-              promise = promise
-                .then(matcherProducer)
-                .then(function (matcher) {
-                  return getFiles(section[5], cssReg, alternatePath, matcher)
-                })
-                .then(function (files) {
-                  var name = section[4];
-                  streams.push(process(name, files, section[1]));
-                  var filePath = getPath(name);
-                  html.push('<link rel="stylesheet" href="' + section[3].replace(path.basename(name), path.basename(filePath)) + '"/>');
-                });
-            }(section, alternatePath));
-          }
+
+          (function (section, alternatePath) {
+            var type = getBlockType(section[5]);
+            promise = promise
+              .then(matcherProducer)
+              .then(function (matcher) {
+                return getFiles(section[5], type === 'js' ? jsReg : cssReg, alternatePath, matcher)
+              })
+              .then(function (files) {
+                var name = section[4];
+                streams.push(process(name, files, section[1]));
+                var filePaths = name ? [section[3]] : files.map(function (f) { return file.path; });
+                filePaths
+                  .map(function (path) { return [path, getPath(path)] })
+                  .forEach(function (filePath) {
+                    var relPath = filePath[0].replace(path.basename(filePath[0]), path.basename(filePath[1]));
+                    if(type === 'js')
+                      html.push('<script src="' + relPath + '"></script>');
+                    else
+                      html.push('<link rel="stylesheet" href="' + relPath + '"/>');
+                  });
+              });
+          }(section, alternatePath));
         }
 
         if (startCondLine && endCondLine) {
@@ -349,7 +343,7 @@ module.exports = function (options) {
       });
     }
     else {
-        callback();
+      callback();
     }
   });
 };
