@@ -199,8 +199,11 @@ module.exports = function (options) {
     if (typeof pipeline === 'function') {
       return pipeline(tip, concatTask);
     }
-    else {
+    else if(name) {
       return tip.pipe(concatTask);
+    }
+    else {
+      return tip;
     }
   }
 
