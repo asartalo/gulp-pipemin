@@ -9,13 +9,14 @@ var minimatch = require('minimatch');
 var when = require('when');
 var es = require('event-stream');
 var Readable = require('stream').Readable;
+var _ = require('lodash');
 
 module.exports = function (options) {
   options = options || {};
   var startReg = /<!--\s*build:(\w+)(?:\(([^\)]+?)\))?\s+(\/?([^\s]+?))?\s*-->/gim;
   var endReg = /<!--\s*endbuild\s*-->/gim;
-  var jsReg = /<\s*script\s+.*?src\s*=\s*("|')([^"']+?)\1.*?><\s*\/\s*script\s*>/gi;
-  var cssReg = /<\s*link\s+.*?href\s*=\s*("|')([^"']+)\1.*?>/gi;
+  var jsReg = /<\s*script\s+.*?src\s*=\s*("|')((?:[^\1]|\\\1)+?)\1.*?><\s*\/\s*script\s*>/gi;
+  var cssReg = /<\s*link\s+.*?href\s*=\s*("|')((?:[^\1]|\\\1)+?)\1.*?>/gi;
   var startCondReg = /<!--\[[^\]]+\]>/gim;
   var endCondReg = /<!\[endif\]-->/gim;
   var basePath, mainPath, mainName, alternatePath;
@@ -41,10 +42,11 @@ module.exports = function (options) {
     return !cssReg.test(content) ? 'js' : 'css';
   }
 
-  function readStream(stream, callback) {
+  function readStream(streamCtor, callback) {
     var files = [];
     var deferred = when.defer();
 
+    var stream = streamCtor();
     stream.on('data', function (file) {
       if (file.isStream()) {
         this.emit('error', gutil.PluginError('gulp-usemin', 'Streams in assets are not supported!'));
@@ -82,8 +84,15 @@ module.exports = function (options) {
     var notMatched = allFiles.slice(); // clone
 
     return {
-      matching: function (pattern) {
-        var matched = minimatch.match(allFiles, pattern);
+      matching: function (patterns) {
+        function doMatch(pattern) {
+          return minimatch.match(allFiles, pattern);
+        }
+
+        var incs = patterns.inc.map(doMatch);
+        var excs = patterns.exc.map(doMatch);
+
+        var matched = _.difference(_.union.apply(null, incs), _.union.apply(null, excs));
 
         // filter array
         notMatched = notMatched.filter(function (i) {
@@ -109,23 +118,53 @@ module.exports = function (options) {
     var files = [];
     var i, l;
 
+    var arrayDetect = /^\[.*\]$/;
+    var arrayParse = /'((?:[^']|\\')*[^'\\])'(?:\s*,\s*)?/g;
+
     content
       .replace(startCondReg, '')
       .replace(endCondReg, '')
       .replace(/<!--(?:(?:.|\r|\n)*?)-->/gim, '')
-      .replace(reg, function (a, quote, b) {
-        var filePath = path.resolve(path.join(alternatePath || options.path || mainPath, b));
+      .replace(reg, function (a, quote, pathPattern) {
+        var patterns;
 
-        if (options.assetsDir)
-          filePath = path.resolve(path.join(options.assetsDir, path.relative(basePath, filePath)));
+        var arrayDetected = pathPattern.match(arrayDetect);
+        if(arrayDetected) {
+          patterns = [];
+          pathPattern.replace(arrayParse, function (a, pattern) {
+            patterns.push(pattern);
+          });
+        }
+        else {
+          patterns = [pathPattern];
+        }
 
-        paths.push(filePath);
+        var inc = [],
+            exc = [];
+
+        _.each(patterns, function (pattern) {
+          var isExc = false;
+          if(pattern[0] === '!') {
+            isExc = true;
+            pattern = pattern.slice(1);
+          }
+
+          var filePath = path.resolve(path.join(alternatePath || options.path || mainPath, pattern));
+          if (options.assetsDir)
+            filePath = path.resolve(path.join(options.assetsDir, path.relative(basePath, filePath)));
+
+          (isExc ? exc : inc).push(filePath);
+        });
+        paths.push({inc: inc, exc: exc});
       });
 
     if (!matcherPromise) {
+      function globSync(pattern) { return glob.sync(pattern); }
       // read files from filesystem
       for (i = 0, l = paths.length; i < l; ++i) {
-        var filepaths = glob.sync(paths[i]);
+        var incs = paths[i].inc.map(globSync);
+        var excs = paths[i].exc.map(globSync);
+        var filepaths = _.difference(_.union.apply(null, incs), _.union.apply(null, excs));
         if (filepaths[0] === undefined) {
           throw new gutil.PluginError('gulp-usemin', 'Path ' + paths[i] + ' not found!');
         }
@@ -181,6 +220,9 @@ module.exports = function (options) {
 
   function processTask(pipeline, name, files) {
     var newFiles = [];
+    if(pipeline === null) {
+      return null;
+    }
 
     var tip = new Readable({objectMode: true});
 
@@ -208,7 +250,11 @@ module.exports = function (options) {
   }
 
   function process(name, files, pipelineId) {
-    var pipeline = options[pipelineId] || [];
+    var pipeline = options[pipelineId];
+    if(typeof pipeline === 'undefined') {
+      pipeline = [];
+    }
+
     return processTask(pipeline, name, files);
   }
 
@@ -251,8 +297,11 @@ module.exports = function (options) {
               })
               .then(function (files) {
                 var name = section[4];
+
                 streams.push(process(name, files, section[1]));
-                var filePaths = name ? [section[3]] : files.map(function (f) { return file.path; });
+                var filePaths = name ? [section[3]] : files.map(function (f) {
+                  return path.relative(f.base, f.path).split(path.sep).join('/');
+                });
                 filePaths
                   .map(function (path) { return [path, getPath(path)] })
                   .forEach(function (filePath) {
@@ -285,14 +334,14 @@ module.exports = function (options) {
 
     return promise.then(function () {
       streams.push(process(mainName, [createFile(mainName, html.join(''))], 'html'));
-      return es.merge.apply(es, streams);
+      return es.merge.apply(es, streams.filter(function (stream) { return stream !== null; }));
     });
   }
 
   var matcherPromise, matcherProducer;
 
   if (options.assetsStream) {
-    matcherPromise = readStream(options.assetsStream())
+    matcherPromise = readStream(options.assetsStream)
       .then(function (filesList) {
         return produceMatcher(filesList);
       });
@@ -335,6 +384,10 @@ module.exports = function (options) {
       matcherPromise.then(function (filesMatcher) {
         var rest = filesMatcher.notMatched();
         var stream = processTask(options.other, options.othersName, rest)
+        if(stream === null) {
+          callback();
+          return;
+        }
 
         stream.on('data', function (file) {
           push(file);
