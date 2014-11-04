@@ -155,7 +155,7 @@ module.exports = function (options) {
 
           (isExc ? exc : inc).push(filePath);
         });
-        paths.push({inc: inc, exc: exc});
+        paths.push({inc: inc, exc: exc, src: pathPattern});
       });
 
     if (!matcherPromise) {
@@ -189,7 +189,7 @@ module.exports = function (options) {
       for (i = 0, l = paths.length; i < l; ++i) {
         var matching = matcherPromise.matching(paths[i]);
         if (matching[0] === undefined) {
-          throw new gutil.PluginError('gulp-usemin', 'File ' + paths[i] + ' not in stream!');
+          throw new gutil.PluginError('gulp-usemin', 'Pattern ' + paths[i].src + ' not in stream!');
         }
         files.push.apply(files, matching);
       }
