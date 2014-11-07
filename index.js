@@ -129,7 +129,7 @@ module.exports = function (options) {
         var patterns;
 
         var arrayDetected = pathPattern.match(arrayDetect);
-        if(arrayDetected) {
+        if (arrayDetected) {
           patterns = [];
           pathPattern.replace(arrayParse, function (a, pattern) {
             patterns.push(pattern);
@@ -144,7 +144,7 @@ module.exports = function (options) {
 
         _.each(patterns, function (pattern) {
           var isExc = false;
-          if(pattern[0] === '!') {
+          if (pattern[0] === '!') {
             isExc = true;
             pattern = pattern.slice(1);
           }
@@ -218,9 +218,23 @@ module.exports = function (options) {
     });
   }
 
+  function wrapLazypipe(lazypipe) {
+    return function (stream, concat) {
+      if (!_.isUndefined(concat)) {
+        return stream
+          .pipe(concat)
+          .pipe(lazypipe());
+      }
+      else {
+        return stream
+          .pipe(lazypipe());
+      }
+    };
+  }
+
   function processTask(pipeline, name, files) {
     var newFiles = [];
-    if(pipeline === null) {
+    if (pipeline === null) {
       return null;
     }
 
@@ -239,9 +253,13 @@ module.exports = function (options) {
     var concatTask = name ? concatThrough(name) : undefined;
 
     if (typeof pipeline === 'function') {
+      // lazypipe support
+      if (typeof pipeline.pipe === 'function') {
+        return wrapLazypipe(pipeline)(tip, concatTask);
+      }
       return pipeline(tip, concatTask);
     }
-    else if(name) {
+    else if (name) {
       return tip.pipe(concatTask);
     }
     else {
@@ -251,7 +269,7 @@ module.exports = function (options) {
 
   function process(name, files, pipelineId) {
     var pipeline = options[pipelineId];
-    if(typeof pipeline === 'undefined') {
+    if (typeof pipeline === 'undefined') {
       pipeline = [];
     }
 
@@ -306,7 +324,7 @@ module.exports = function (options) {
                   .map(function (path) { return [path, getPath(path)] })
                   .forEach(function (filePath) {
                     var relPath = filePath[0].replace(path.basename(filePath[0]), path.basename(filePath[1]));
-                    if(type === 'js')
+                    if (type === 'js')
                       html.push('<script src="' + relPath + '"></script>');
                     else
                       html.push('<link rel="stylesheet" href="' + relPath + '"/>');
@@ -384,7 +402,7 @@ module.exports = function (options) {
       matcherPromise.then(function (filesMatcher) {
         var rest = filesMatcher.notMatched();
         var stream = processTask(options.other, options.othersName, rest)
-        if(stream === null) {
+        if (stream === null) {
           callback();
           return;
         }
