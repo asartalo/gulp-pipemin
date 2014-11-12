@@ -318,7 +318,7 @@ module.exports = function (options) {
 
                 streams.push(process(name, files, section[1]));
                 var filePaths = name ? [section[3]] : files.map(function (f) {
-                  return path.relative(f.base, f.path).split(path.sep).join('/');
+                  return '/' + path.relative(f.base, f.path).split(path.sep).join('/');
                 });
                 filePaths
                   .map(function (path) { return [path, getPath(path)] })
@@ -401,7 +401,7 @@ module.exports = function (options) {
       var push = this.push.bind(this);
       matcherPromise.then(function (filesMatcher) {
         var rest = filesMatcher.notMatched();
-        var stream = processTask(options.other, options.othersName, rest)
+        var stream = processTask(options.other, options.othersName, rest);
         if (stream === null) {
           callback();
           return;
