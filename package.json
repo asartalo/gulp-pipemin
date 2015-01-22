@@ -31,12 +31,14 @@
   },
   "keywords": [
     "gulpplugin",
-    "usemin"
+    "usemin",
+    "pipemin",
+    "lazypipe"
   ],
   "author": "Frizi <frizi09@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/frizi/gulp-usemin/issues"
+    "url": "https://github.com/frizi/gulp-pipemin/issues"
   },
   "engines": {
     "node": ">=0.8"
