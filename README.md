@@ -1,29 +1,26 @@
-# gulp-usemin
-> Replaces references to non-optimized scripts or stylesheets into a set of HTML files (or any templates/views).
-
-This task is designed for gulp 3.
-> Attention: v0.3.0 options is not compatible with v0.2.0.
+# gulp-pipemin
+> Streamlined resource transformations configured in html.
 
 ## Usage
 
-First, install `gulp-usemin` as a development dependency:
+First, install `gulp-pipemin` as a development dependency:
 
 ```shell
-npm install --save-dev gulp-usemin
+npm install --save-dev gulp-pipemin
 ```
 
 Then, add it to your `gulpfile.js`:
 
 ```javascript
-var usemin = require('gulp-usemin');
+var pipemin = require('gulp-pipemin');
 var uglify = require('gulp-uglify');
 var minifyHtml = require('gulp-minify-html');
 var minifyCss = require('gulp-minify-css');
 var rev = require('gulp-rev');
 
-gulp.task('usemin', function () {
+gulp.task('pipemin', function () {
   return gulp.src('./*.html')
-    .pipe(usemin({
+    .pipe(pipemin({
       css: function (stream, concat) {
         return stream
           .pipe(minifyCss())
@@ -59,7 +56,7 @@ Blocks are expressed as:
 - **alternate search path**: (optional) By default the input files are relative to the treated file. Alternate search path allows one to change that
 - **path**: the file path of the optimized file, the target output
 
-An example of this in completed form can be seen below:
+An example of this in completed form can be seen below (note usage of globs):
 
 ```html
 <!-- build:css style.css -->
@@ -68,12 +65,11 @@ An example of this in completed form can be seen below:
 <!-- endbuild -->
 
 <!-- build:js js/lib.js -->
-<script src="../lib/angular-min.js"></script>
-<script src="../lib/angular-animate-min.js"></script>
+<script src="../lib/angular-*-min.js"></script>
 <!-- endbuild -->
 
 <!-- build:js1 js/app.js -->
-<script src="js/app.js"></script>
+<script src="js/{app,main}.js"></script>
 <script src="js/controllers/thing-controller.js"></script>
 <script src="js/models/thing-model.js"></script>
 <script src="js/views/thing-view.js"></script>
@@ -110,7 +106,7 @@ Special pipeline for files not matched by any block, but passed to asssets strea
 Type: `Function`
 
 Stream constructor (works with lazypipe) of assets stream.
-When passed, usemin search for files requested by blocks inside this stream instead of probing filesystem. Error is returned if no such file was passed.
+When passed, pipemin search for files requested by blocks inside this stream instead of probing filesystem. Error is returned if no such file was passed.
 
 #### debugStreamFiles
 Type: `Boolean`
@@ -155,9 +151,9 @@ We want to optimize `foo.js` and `bar.js` into `optimized.js`, referenced using 
 We want our files to be generated in the `dist` directory. `gulpfile.js` should contain the following block:
 
 ```javascript
-gulp.task('usemin', function () {
+gulp.task('pipemin', function () {
   return gulp.src('./app/index.html')
-      .pipe(usemin({
+      .pipe(pipemin({
         js: [uglify()]
         // in this case css will be only concatenated (like css: ['concat']).
       }))
@@ -192,64 +188,11 @@ This will generate the following output:
 
 ## Changelog
 
-#####0.3.8
-- allow removal option (by tejohnso)
-- added support for single quotes (by adicirstei)
 
-#####0.3.7
-- ouputRelativePath renamed outputRelativePath
+#####2.2.0
+- npm release
+#####2.1.0
+- resource globing support
 
-#####0.3.6
-- ouputRelativePath option (by bhstahl)
-
-#####0.3.5
-- Support for conditional comments inside build blocks (by simplydenis)
-
-#####0.3.4
-- When a file does not exist an error containing the missing path is thrown
-
-#####0.3.3
-- fixed dependencies
-- Add support for multiple alternative paths (by peleteiro)
-
-#####0.3.2
-- fixed assetsDir option (by rovjuvano)
-
-#####0.3.1
-- fixed fails to create source map files by uglify({outSourceMap: true})
-
-#####0.3.0
-- new version of options
-
-#####0.2.3
-- fixed html minify bug
-
-#####0.2.2
-- allow gulp-usemin to work with minified source HTML (by CWSpear)
-- fixed alternate path bug (by CWSpear)
-- add assetsDir option (by pursual)
-- add rev option (by pursual)
-
-#####0.2.1
-- fixed subfolders bug
-
-#####0.2.0
-- no minification by default. New options API
-
-#####0.1.4
-- add alternate search path support
-
-#####0.1.3
-- add support for absolute URLs (by vasa-chi)
-
-#####0.1.1
-- fixed aggressive replace comments
-
-#####0.1.0
-- fixed some bugs. Add tests.
-
-#####0.0.2
-- add minification by default
-
-#####0.0.1
-- initial release
+#####2.0.0
+- Async tasks and lazypipe support
