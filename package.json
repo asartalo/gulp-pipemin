@@ -1,5 +1,5 @@
 {
-  "name": "gulp-usemin",
+  "name": "gulp-pipemin",
   "version": "0.3.8",
   "description": "Replaces references to non-optimized scripts or stylesheets into a set of HTML files (or any templates/views).",
   "main": "index.js",
@@ -33,7 +33,7 @@
     "gulpplugin",
     "usemin"
   ],
-  "author": "Alexander Zonov <zont@pochta.ru>",
+  "author": "Pawel Grabarz <frizi09@gmail.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/zont/gulp-usemin/issues"
