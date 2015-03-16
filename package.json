@@ -1,6 +1,6 @@
 {
   "name": "gulp-pipemin",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "description": "Streamlined resource transformations configured in html.",
   "main": "index.js",
   "dependencies": {
