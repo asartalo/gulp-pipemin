@@ -52,11 +52,9 @@ module.exports = function (options) {
         this.emit('error', gutil.PluginError('gulp-usemin', 'Streams in assets are not supported!'));
       }
 
-      if (file.isBuffer()) {
-        file.base = path.resolve(file.base);
-        file.path = path.resolve(file.path);
-        files.push(file);
-      }
+      file.base = path.resolve(file.base);
+      file.path = path.resolve(file.path);
+      files.push(file);
     });
 
     stream.on('end', function () {
