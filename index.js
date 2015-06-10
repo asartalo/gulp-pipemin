@@ -39,6 +39,7 @@ module.exports = function (options) {
   }
 
   function getBlockType(content) {
+    console.log('#getBlockType', cssReg.test(content));
     return !cssReg.test(content) ? 'js' : 'css';
   }
 
@@ -205,6 +206,7 @@ module.exports = function (options) {
     return createFile(name, buffer.join(EOL));
   }
 
+  // Sets the concatenated version
   function concatThrough(name) {
     var throughFiles = [];
     return through.obj(function (file, enc, done) {
@@ -218,12 +220,15 @@ module.exports = function (options) {
 
   function wrapLazypipe(lazypipe) {
     return function (stream, concat) {
+      console.log('#wrapLazypipe:', lazypipe, concat);
       if (!_.isUndefined(concat)) {
+        console.log("with concat");
         return stream
           .pipe(concat)
           .pipe(lazypipe());
       }
       else {
+        console.log("without concat");
         return stream
           .pipe(lazypipe());
       }
@@ -255,12 +260,15 @@ module.exports = function (options) {
       if (typeof pipeline.pipe === 'function') {
         return wrapLazypipe(pipeline)(tip, concatTask);
       }
+      console.log('pipeline:', tip, concatTask);
       return pipeline(tip, concatTask);
     }
     else if (name) {
+      console.log('pipeline not a function but has a name');
       return tip.pipe(concatTask);
     }
     else {
+      console.log('pipeline not a function no name');
       return tip;
     }
   }
@@ -275,6 +283,7 @@ module.exports = function (options) {
   }
 
   function processHtml(content, matcherProducer) {
+    console.log("#processHtml:");
     var html = [];
     var sections = content.split(endReg);
     var promise = when.resolve();
@@ -305,6 +314,7 @@ module.exports = function (options) {
         if (section[1] !== 'remove') {
 
           (function (section, alternatePath) {
+            console.log(alternatePath);
             var type = getBlockType(section[5]);
             promise = promise
               .then(matcherProducer)
@@ -314,14 +324,19 @@ module.exports = function (options) {
               .then(function (files) {
                 var name = section[4];
 
+                console.log('name:', name);
                 streams.push(process(name, files, section[1]));
+                console.log("section3:", section[3]);
                 var filePaths = name ? [section[3]] : files.map(function (f) {
+                  console.log(f);
                   return '/' + path.relative(f.base, f.path).split(path.sep).join('/');
                 });
+                console.log('filePaths:', filePaths);
                 filePaths
                   .map(function (path) { return [path, getPath(path)] })
                   .forEach(function (filePath) {
                     var relPath = filePath[0].replace(path.basename(filePath[0]), path.basename(filePath[1]));
+                    console.log('relPath:', relPath);
                     if (type === 'js')
                       html.push('<script src="' + relPath + '"></script>');
                     else
